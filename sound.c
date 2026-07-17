@@ -645,9 +645,13 @@ void close_sound(void)
 
 SoundError play_wav(const char *path)
 {
+    // Playing a file back requires the audio device; in file mode it was never
+    // initialized, so refuse rather than touch uninitialized OpenAL state.
+    if (file_mode) return SE_INVALID_OPTION;
+
 #ifdef GPIO
     return SE_INVALID_OPTION;
-    
+
 #else
     WaveHeader header;
     int16_t *file_data = NULL;
