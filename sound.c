@@ -54,6 +54,16 @@
 #define BUFFER_SIZE (1 * SAMPLES_PER_SECOND)
 #define RAMP_MSEC 20.0
 
+// When writing to a .wav file, mbeep never opens the audio device: the whole
+// OpenAL/GPIO playback path is short-circuited. This lets .wav output be
+// generated on headless systems (CI, servers) that have no sound hardware.
+static bool file_mode = false;
+
+void set_sound_file_mode(bool on)
+{
+    file_mode = on;
+}
+
 #ifdef GPIO
 #define __USE_POSIX199309
 #define __USE_XOPEN2K
@@ -99,6 +109,9 @@ void write_data(short *data_ptr, double freq, size_t ramp_count, size_t total_co
 SoundError init_sound(void)
 {
     SoundError error = SE_NO_ERROR;
+
+    // Writing to a file: no device to initialize.
+    if (file_mode) return SE_NO_ERROR;
 
 #ifdef GPIO
     if (gpioInitialise() == 0) {
@@ -478,6 +491,8 @@ SoundError play_buffers(void)
 {
     SoundError error = SE_NO_ERROR;
 
+    if (file_mode) return SE_NO_ERROR;
+
 #ifndef GPIO
     if (data_offset > 0) {
         // current buffer is partially filled
@@ -535,6 +550,8 @@ SoundError play_buffers(void)
 
 bool sound_playing(void)
 {
+    if (file_mode) return false;
+
 #ifndef GPIO
 
     ALint value;
@@ -556,10 +573,12 @@ SoundError wait_for_buffers(void)
 {
     SoundError error = SE_NO_ERROR;
 
+    if (file_mode) return SE_NO_ERROR;
+
 #if DEBUG
     fprintf(stderr, "wait_for_buffers()\n");
 #endif
-    
+
 #ifndef GPIO
     bool done = false;
     while (!done && error == SE_NO_ERROR) {
@@ -591,6 +610,8 @@ SoundError wait_for_buffers(void)
 
 void close_sound(void)
 {
+    if (file_mode) return;
+
 #ifndef GPIO
     if (data != NULL) {
         free(data);
