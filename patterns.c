@@ -226,7 +226,7 @@ SoundError play_code(double freq, double dit, bool paris_standard, double farnsw
         gap_dit = dit + extra / GAP_DITS;
     }
 
-    for (int k = 0; k < strlen(text); k++) {
+    for (size_t k = 0; k < strlen(text); k++) {
         unsigned char c = (unsigned char)toupper(text[k]);
         char sequence[16];
 
@@ -357,7 +357,7 @@ SoundError play_code(double freq, double dit, bool paris_standard, double farnsw
             }
         }
 
-        for (int i = 0; i < strlen(sequence); i++) {
+        for (size_t i = 0; i < strlen(sequence); i++) {
             if (sequence[i] == '~') {
                 fill_buffer_or_file(SILENCE, 1000.0, out_file);
 
