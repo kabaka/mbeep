@@ -35,21 +35,22 @@ jobs:
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      # Required to upload coverage data to GitHub Code Quality.
-      code-quality: write
     steps:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y libopenal-dev gcovr
 
-      - name: Build with coverage and run tests
+      # Builds instrumented, runs the full suite against openal-soft's null
+      # backend, and fails if line coverage drops below 80%. (GitHub's native
+      # Code Quality coverage does not support C/C++, so we gate here directly.)
+      - name: Build with coverage and enforce threshold
         run: make coverage
 
-      - name: Upload coverage to GitHub
-        uses: actions/upload-code-coverage@v1
+      - name: Upload coverage report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          file: coverage.xml
-          language: cpp
+          name: coverage-report
+          path: coverage.xml
+          if-no-files-found: ignore
