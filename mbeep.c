@@ -26,6 +26,7 @@
 
 #include <errno.h>
 #include <limits.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,7 +58,9 @@ static bool parse_double(const char *s, double *out)
     char *end;
     errno = 0;
     double v = strtod(s, &end);
-    if (end == s || *end != '\0' || errno == ERANGE) return false;
+    // Reject empty input, trailing junk, overflow, and non-finite values
+    // (strtod accepts "nan"/"inf", and NaN would slip past range checks).
+    if (end == s || *end != '\0' || errno == ERANGE || !isfinite(v)) return false;
     *out = v;
     return true;
 }
@@ -500,6 +503,7 @@ int main(int argc, const char * argv[]) {
         case SE_OUTPUT_FILE_OPEN_ERROR:     printf("Error: SE_OUTPUT_FILE_OPEN_ERROR\n");   break;
         case SE_FILE_ALREADY_OPEN_ERROR:    printf("Error: SE_FILE_ALREADY_OPEN_ERROR\n");  break;
         case SE_FILE_WRITE_ERROR:           printf("Error: SE_FILE_WRITE_ERROR\n");         break;
+        case SE_INVALID_FILE_FORMAT:        printf("Error: SE_INVALID_FILE_FORMAT\n");      break;
 
         case SE_UNKNOWN:
         default:

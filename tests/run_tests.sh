@@ -137,6 +137,8 @@ fi
 run_fail "bad freq (non-numeric)"  "$MBEEP" -o "$WORK/e.wav" -f abc
 run_fail "bad freq (too low)"      "$MBEEP" -o "$WORK/e.wav" -f 10
 run_fail "bad freq (too high)"     "$MBEEP" -o "$WORK/e.wav" -f 30000
+run_fail "reject freq nan"         "$MBEEP" -o "$WORK/e.wav" -f nan
+run_fail "reject freq inf"         "$MBEEP" -o "$WORK/e.wav" -f inf
 run_fail "bad time (negative)"     "$MBEEP" -o "$WORK/e.wav" -t -5
 run_fail "bad gap (negative)"      "$MBEEP" -o "$WORK/e.wav" -g -1
 run_fail "bad repeats (negative)"  "$MBEEP" -o "$WORK/e.wav" -r -2
@@ -154,6 +156,8 @@ run_fail "unknown option"          "$MBEEP" --nonsense-option
 run_fail "input file not found"    "$MBEEP" -o "$WORK/e.wav" -i "$WORK/nope.txt" -m
 run_fail "output file unwritable"  "$MBEEP" -o "$WORK/nodir/x.wav" -f 440
 run_fail "double input file"       "$MBEEP" -i "$WORK/midi.txt" -i "$WORK/morse.txt" -m
+# --play requires the audio device, so it is rejected in file mode (-o present).
+run_fail "--play rejected with -o"  "$MBEEP" -o "$WORK/e.wav" --play "$WORK/t2.wav"
 
 # ---------------------------------------------------------------------------
 # Playback (opens the audio device) -- only when explicitly enabled
