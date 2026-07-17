@@ -407,6 +407,9 @@ int main(int argc, const char * argv[]) {
             }
 
             if (error == SE_NO_ERROR) {
+                // Writing to a file: skip the audio device entirely so .wav
+                // output works with no sound hardware present.
+                set_sound_file_mode(true);
                 error = begin_wave_file(out_file);
             }
 

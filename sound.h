@@ -81,6 +81,10 @@ typedef struct WaveHeader WaveHeader;
 void set_output_device(const char *name);
 SoundError list_output_devices(void);
 
+// When enabled, mbeep writes .wav data only and never opens the audio device,
+// so output can be generated on systems with no sound hardware.
+void set_sound_file_mode(bool on);
+
 SoundError init_sound(void);
 SoundError fill_buffer_or_file(double freq, double msec, FILE *file);
 SoundError fill_file(double freq, double msec, FILE *file);
