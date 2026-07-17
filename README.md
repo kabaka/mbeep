@@ -30,52 +30,41 @@ For more information, see man page.
 
 ### Build and install
 
-* macOS
+`make` builds the `mbeep` binary and generates the `mbeep.1` man page; `sudo make
+install` copies both into place.
+
+* macOS (OpenAL ships with the system — no extra packages needed)
 
 ```
 cd path_to_directory
 make
-./mbeep --man-page > mbeep.1
 sudo make install
 ```
 
-* CentOS 7
+* Linux with OpenAL — Debian/Ubuntu
 
 ```
-sudo yum install openal-soft-devel
+sudo apt-get install build-essential libopenal-dev
 cd path_to_directory
 make
-./mbeep --man-page > mbeep.1
 sudo make install
 ```
 
-* Ubuntu 16.04
+* Linux with OpenAL — Fedora/RHEL/CentOS Stream
 
 ```
-sudo apt-get install libopenal-dev
+sudo dnf install gcc make openal-soft-devel
 cd path_to_directory
 make
-./mbeep --man-page > mbeep.1
 sudo make install
 ```
 
-* Raspbian Bullseye
-
-```
-sudo apt-get install libopenal-dev
-cd path_to_directory
-make
-./mbeep --man-page > mbeep.1
-sudo make install
-```
-
-* Raspbian Bullseye with GPIO patch
+* Raspberry Pi OS with the GPIO patch (no OpenAL needed)
 
 ```
 cd path_to_directory
-# assumes piezo speaker attached to GPIO pin BCM19
+# assumes a piezo speaker attached to GPIO pin BCM19
 make GPIO=19
-./mbeep --man-page > mbeep.1
 sudo make install
 ```
 

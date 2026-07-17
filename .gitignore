@@ -1,1 +1,16 @@
+# macOS
 .DS_Store
+
+# Build output
+mbeep
+*.o
+
+# Generated man page
+mbeep.1
+
+# Coverage artifacts
+*.gcno
+*.gcda
+*.gcov
+coverage.xml
+coverage/
