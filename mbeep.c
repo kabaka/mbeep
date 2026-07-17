@@ -455,11 +455,14 @@ int main(int argc, const char * argv[]) {
 
     if (error == SE_NO_ERROR && do_final_play) {
         if (needs_init) {
-            init_sound();
+            // Propagate init failure instead of proceeding to fill_buffer() on
+            // uninitialized OpenAL state, which would crash when no audio
+            // device is available (e.g. a headless machine).
+            error = init_sound();
             needs_init = false;
         }
 
-        error = play(freq, msec, gap, repeats, out_file);
+        if (error == SE_NO_ERROR) error = play(freq, msec, gap, repeats, out_file);
 
         if (error == SE_NO_ERROR) error = play_buffers();
         if (error == SE_NO_ERROR) error = wait_for_buffers();
