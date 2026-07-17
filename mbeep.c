@@ -24,6 +24,8 @@
 // WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <errno.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,6 +48,32 @@
 #if !USE_CLOCK_MONOTONIC
 #include <sys/time.h>
 #endif
+
+// Parse a full string as a double. Returns false on empty input, trailing
+// junk (e.g. "12x"), or overflow, so bad arguments are rejected rather than
+// silently coerced to 0 the way atof() would.
+static bool parse_double(const char *s, double *out)
+{
+    char *end;
+    errno = 0;
+    double v = strtod(s, &end);
+    if (end == s || *end != '\0' || errno == ERANGE) return false;
+    *out = v;
+    return true;
+}
+
+// Parse a full string as an int, with the same strictness as parse_double().
+static bool parse_int(const char *s, int *out)
+{
+    char *end;
+    errno = 0;
+    long v = strtol(s, &end, 10);
+    if (end == s || *end != '\0' || errno == ERANGE || v < INT_MIN || v > INT_MAX) {
+        return false;
+    }
+    *out = (int)v;
+    return true;
+}
 
 int main(int argc, const char * argv[]) {
     SoundError error = SE_NO_ERROR;
@@ -73,23 +101,21 @@ int main(int argc, const char * argv[]) {
     for (int index = 1; index < argc && error == SE_NO_ERROR; index++) {
         //  -f  frequency
         if (strcmp(argv[index], "-f") == 0 && index + 1 < argc) {
-            freq = atof(argv[++index]);
-            if (freq < 20.0 || freq > 20000.0) error = SE_INVALID_FREQUENCY;
+            if (!parse_double(argv[++index], &freq) || freq < 20.0 || freq > 20000.0) {
+                error = SE_INVALID_FREQUENCY;
+            }
 
         //  -t  time in msec
         } else if (strcmp(argv[index], "-t") == 0 && index + 1 < argc) {
-            msec = atof(argv[++index]);
-            if (msec < 0.0) error = SE_INVALID_TIME;
+            if (!parse_double(argv[++index], &msec) || msec < 0.0) error = SE_INVALID_TIME;
 
         //  -g  gap in msec
         } else if (strcmp(argv[index], "-g") == 0 && index + 1 < argc) {
-            gap = atof(argv[++index]);
-            if (gap < 0.0) error = SE_INVALID_GAP;
+            if (!parse_double(argv[++index], &gap) || gap < 0.0) error = SE_INVALID_GAP;
 
         //  -r  repeat
         } else if (strcmp(argv[index], "-r") == 0 && index + 1 < argc) {
-            repeats = atoi(argv[++index]);
-            if (repeats < 0) error = SE_INVALID_REPEATS;
+            if (!parse_int(argv[++index], &repeats) || repeats < 0) error = SE_INVALID_REPEATS;
 
         //  -p  (play)
         } else if (strcmp(argv[index], "-p") == 0) {
@@ -101,9 +127,10 @@ int main(int argc, const char * argv[]) {
             if (error == SE_NO_ERROR) error = play(freq, msec, gap, repeats, out_file);
 
         //  -b  beats (quarter notes) per minute
-        } else if (strcmp(argv[index], "-b") == 0) {
-            bpm = atof(argv[++index]);
-            if (bpm < 20.0 || bpm > 500.0) error = SE_INVALID_BPM;
+        } else if (strcmp(argv[index], "-b") == 0 && index + 1 < argc) {
+            if (!parse_double(argv[++index], &bpm) || bpm < 20.0 || bpm > 500.0) {
+                error = SE_INVALID_BPM;
+            }
 
         //  -m  string to send as midi notes
         } else if (strcmp(argv[index], "-m") == 0 && index + 1 < argc) {
@@ -150,31 +177,41 @@ int main(int argc, const char * argv[]) {
         //  -w  --paris-wpm words per minute, PARIS standard
         } else if (((strcmp(argv[index], "--paris-wpm") == 0) ||
                     (strcmp(argv[index], "-w") == 0)) && index + 1 < argc) {
-            word_speed = atof(argv[++index]);
-            if (!using_word_space_speed) word_space_speed = word_speed;
-            paris_standard = true;
-            dit = 60.0 * 1000.0 / (50.0 * word_speed);
-            if (word_speed < 5.0 || word_speed > 60.0) error = SE_INVALID_WPM;
+            if (!parse_double(argv[++index], &word_speed) ||
+                word_speed < 5.0 || word_speed > 60.0) {
+                error = SE_INVALID_WPM;
+            } else {
+                if (!using_word_space_speed) word_space_speed = word_speed;
+                paris_standard = true;
+                dit = 60.0 * 1000.0 / (50.0 * word_speed);
+            }
 
         //  --codex-wpm  words per minute, CODEX standard
         } else if (strcmp(argv[index], "--codex-wpm") == 0 && index + 1 < argc) {
-            word_speed = atof(argv[++index]);
-            if (!using_word_space_speed) word_space_speed = word_speed;
-            paris_standard = false;
-            dit = 60.0 * 1000.0 / (60.0 * word_speed);
-            if (word_speed < 5.0 || word_speed > 60.0) error = SE_INVALID_WPM;
+            if (!parse_double(argv[++index], &word_speed) ||
+                word_speed < 5.0 || word_speed > 60.0) {
+                error = SE_INVALID_WPM;
+            } else {
+                if (!using_word_space_speed) word_space_speed = word_speed;
+                paris_standard = false;
+                dit = 60.0 * 1000.0 / (60.0 * word_speed);
+            }
 
         //  -x  --farnsworth character speed
         } else if (((strcmp(argv[index], "--farnsworth") == 0) ||
                     (strcmp(argv[index], "-x") == 0)) && index + 1 < argc) {
-            char_speed = atof(argv[++index]);
-            if (char_speed < 5.0 || char_speed > 60.0) error = SE_INVALID_WPM;
+            if (!parse_double(argv[++index], &char_speed) ||
+                char_speed < 5.0 || char_speed > 60.0) {
+                error = SE_INVALID_WPM;
+            }
 
         //  --wss  --word-space-speed word-space speed
         } else if ((strcmp(argv[index], "--wss") == 0) && index + 1 < argc) {
-            word_space_speed = atof(argv[++index]);
             using_word_space_speed = true;
-            if (word_space_speed < 5.0 || word_space_speed > 60.0) error = SE_INVALID_WPM;
+            if (!parse_double(argv[++index], &word_space_speed) ||
+                word_space_speed < 5.0 || word_space_speed > 60.0) {
+                error = SE_INVALID_WPM;
+            }
 
         //  --fcc  print FCC wpm
         } else if (strcmp(argv[index], "--fcc") == 0) {
@@ -428,7 +465,10 @@ int main(int argc, const char * argv[]) {
     }
 
     if (out_file != NULL) {
-        error = finish_wave_file(out_file);
+        // Preserve any earlier error rather than letting a successful
+        // finish_wave_file() mask a failure that already occurred.
+        SoundError finish_error = finish_wave_file(out_file);
+        if (error == SE_NO_ERROR) error = finish_error;
         fclose(out_file);
         out_file = NULL;
     }
@@ -466,6 +506,8 @@ int main(int argc, const char * argv[]) {
 
     close_sound();
 
-    return 0;
+    // Report failure through the exit status so scripts (and the test suite)
+    // can detect errors; SE_EXIT is a normal informational exit (--help etc.).
+    return (error == SE_NO_ERROR || error == SE_EXIT) ? 0 : 1;
 }
 

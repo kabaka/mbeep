@@ -797,6 +797,16 @@ SoundError play_wav_data(WaveHeader *header, int16_t *file_data, long file_size)
     SoundError error = wait_for_buffers();
 #endif
 
+    // Defensive: never trust the header's data_size over the bytes actually
+    // available in the file. read_wav() already checks this, but play_wav_data
+    // is public and processes untrusted WAV input, so re-verify here.
+    if (error == SE_NO_ERROR) {
+        long available = file_size - (long)sizeof(WaveHeader);
+        if (available < 0 || (long)header->data_size > available) {
+            error = SE_INVALID_FILE_FORMAT;
+        }
+    }
+
     if (error == SE_NO_ERROR) {
         // total - total number of samples
         size_t total = header->data_size / header->bytes_per_sample;
