@@ -61,13 +61,16 @@ test : mbeep
 
 # Rebuild with instrumentation, run the full suite (including the audio-device
 # playback path via openal-soft's null backend), and write a Cobertura report.
-# Requires gcovr. On Linux this uses ALSOFT_DRIVERS=null so no sound hardware
-# is needed; it is harmlessly ignored by Apple's OpenAL on macOS.
+# Fails if line coverage drops below 80%. Requires gcovr. On Linux this uses
+# ALSOFT_DRIVERS=null so no sound hardware is needed; it is harmlessly ignored
+# by Apple's OpenAL on macOS.
+COVERAGE_MIN ?= 80
 coverage :
 	$(MAKE) clean
 	$(MAKE) COVERAGE=1
 	MBEEP=./mbeep MBEEP_PLAYBACK=1 ALSOFT_DRIVERS=null tests/run_tests.sh
-	gcovr --root . --exclude tests --cobertura coverage.xml --print-summary
+	gcovr --root . --exclude tests --fail-under-line $(COVERAGE_MIN) \
+		--cobertura coverage.xml --print-summary
 
 clean :
 	rm -f mbeep mbeep.1 *.o *.gcno *.gcda *.gcov coverage.xml
