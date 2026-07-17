@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenAL (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libopenal-dev
+
+      - name: Build with strict warnings
+        run: make CFLAGS="-Wall -Wextra -Werror -std=c99"
+
+      - name: Run test suite
+        env:
+          # openal-soft's headless backend, so playback tests need no hardware.
+          # Harmlessly ignored by Apple's OpenAL on macOS.
+          ALSOFT_DRIVERS: null
+          # Exercise the audio-device path on Linux (null backend); skip it on
+          # macOS runners, which have no guaranteed audio device.
+          MBEEP_PLAYBACK: ${{ runner.os == 'Linux' && '1' || '0' }}
+        run: make test
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required to upload coverage data to GitHub Code Quality.
+      code-quality: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libopenal-dev gcovr
+
+      - name: Build with coverage and run tests
+        run: make coverage
+
+      - name: Upload coverage to GitHub
+        uses: actions/upload-code-coverage@v1
+        with:
+          file: coverage.xml
+          language: cpp
