@@ -344,6 +344,21 @@ int main(int argc, const char * argv[]) {
         } else if (strcmp(argv[index], "-e") == 0) {
             echo = true;
 
+        //  -d --device  select output device by name (must precede play options)
+        } else if (((strcmp(argv[index], "-d") == 0) ||
+                    (strcmp(argv[index], "--device") == 0)) && index + 1 < argc) {
+            if (!needs_init) {
+                // sound is already initialized; too late to switch devices
+                error = SE_INVALID_OPTION;
+            } else {
+                set_output_device(argv[++index]);
+            }
+
+        //  --list-devices  print available output devices and exit
+        } else if (strcmp(argv[index], "--list-devices") == 0) {
+            error = list_output_devices();
+            if (error == SE_NO_ERROR) error = SE_EXIT;
+
         //  -o --wav  output file for .wav
         } else if (((strcmp(argv[index], "-o") == 0) ||
                     (strcmp(argv[index], "--wav") == 0)) && index + 1 < argc && out_file == NULL) {

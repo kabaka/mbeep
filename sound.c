@@ -64,6 +64,9 @@ bool init_OK = false;
 ALCdevice *device = NULL;
 ALCcontext *context = NULL;
 
+// name of output device to open, or NULL for the system default
+const char *output_device_name = NULL;
+
 #define NUM_BUFFERS 3
 ALuint buffers[NUM_BUFFERS];
 ALshort *data = NULL;
@@ -108,7 +111,7 @@ SoundError init_sound(void)
         buffer_queued[k] = false;
     }
 
-    device = alcOpenDevice(NULL);
+    device = alcOpenDevice(output_device_name);
     if (device == NULL) error = SE_NO_DEVICE;
 
     if (error == SE_NO_ERROR) {
@@ -141,6 +144,52 @@ SoundError init_sound(void)
 #endif
 
     return error;
+}
+
+void set_output_device(const char *name)
+{
+#ifndef GPIO
+    output_device_name = name;
+#else
+    (void)name;
+#endif
+}
+
+SoundError list_output_devices(void)
+{
+#ifdef GPIO
+    return SE_INVALID_OPTION;
+
+#else
+    // ALC_ALL_DEVICES_SPECIFIER enumerates every device; fall back to the
+    // basic ALC_DEVICE_SPECIFIER list if the "enumerate all" extension is
+    // not available. Both return a double-null-terminated list of names.
+    const ALCchar *devices = NULL;
+
+    if (alcIsExtensionPresent(NULL, "ALC_ENUMERATE_ALL_EXT") == AL_TRUE) {
+        devices = alcGetString(NULL, ALC_ALL_DEVICES_SPECIFIER);
+    } else if (alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT") == AL_TRUE) {
+        devices = alcGetString(NULL, ALC_DEVICE_SPECIFIER);
+    }
+
+    const ALCchar *default_device = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
+
+    if (devices == NULL || *devices == '\0') {
+        printf("Device enumeration is not supported on this system.\n");
+        if (default_device != NULL && *default_device != '\0') {
+            printf("Default output device: %s\n", default_device);
+        }
+        return SE_NO_ERROR;
+    }
+
+    printf("Available output devices (use with -d <name>):\n");
+    for (const ALCchar *p = devices; *p != '\0'; p += strlen(p) + 1) {
+        bool is_default = default_device != NULL && strcmp(p, default_device) == 0;
+        printf("  %s%s\n", p, is_default ? "  [default]" : "");
+    }
+
+    return SE_NO_ERROR;
+#endif
 }
 
 SoundError fill_buffer_or_file(double freq, double msec, FILE *file)

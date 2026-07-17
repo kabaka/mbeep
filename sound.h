@@ -78,6 +78,9 @@ struct WaveHeader {
 };
 typedef struct WaveHeader WaveHeader;
 
+void set_output_device(const char *name);
+SoundError list_output_devices(void);
+
 SoundError init_sound(void);
 SoundError fill_buffer_or_file(double freq, double msec, FILE *file);
 SoundError fill_file(double freq, double msec, FILE *file);
